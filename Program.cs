@@ -16,15 +16,18 @@ namespace BananaScrape
     {
         private static ChromeDriver _driver = null;
         private static List<MapInfo> _mapInfo = new List<MapInfo>();
+        private static int _downloadPause;
 
-        public static int Main(string[] args)
+        public static int Main()
         {
             return CommandLine.Run<Program>(CommandLine.Arguments, defaultCommandName: "Scrape");
         }
 
         [Description("Scrapes a single Gamebanana page and saves metadata about the maps to a json file. Optionally can download the maps as well.")]
-        public static int Scrape(string url, bool download = false)
+        public static int Scrape(string url, bool download = false, int downloadPause = 1000)
         {
+            _downloadPause = downloadPause;
+
             //var url = "https://gamebanana.com/maps/cats/43"; //A good test page. It only had 47 maps on it...
 
             using (_driver = new ChromeDriver(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)))
@@ -45,9 +48,9 @@ namespace BananaScrape
         }
 
         [Description("Downloads all of the files specified in a scrape json file.")]
-        public static int Download(string filename)
+        public static int Download(string filename, int downloadPause = 1000)
         {
-            Console.WriteLine($"Ey lad! Trying download command: url: {filename}");
+            _downloadPause = downloadPause;
 
             var fileData = JsonConvert.DeserializeObject<JObject>(File.ReadAllText(filename));
             var mapInfo = fileData["MapInfo"].ToObject<Dictionary<string, object>[]>();
@@ -65,7 +68,7 @@ namespace BananaScrape
             foreach (var link in links)
             {
                 DownloadMap(link);
-                Thread.Sleep(1000);
+                Thread.Sleep(_downloadPause);
             }
         }
 
@@ -76,7 +79,6 @@ namespace BananaScrape
             Thread.Sleep(100);
             _driver.JavascriptClick(".DownloadOptions > .GreenColor");
         }
-
 
         private static void ScrapePage(string url)
         {
@@ -108,12 +110,8 @@ namespace BananaScrape
 
         private static int ToInt(string str)
         {
-            int likeCount;
-
-            if (str.EndsWith("k")) likeCount = (int)(float.Parse(str.TrimEnd('k')) * 1000);
-            else likeCount = int.Parse(str);
-
-            return likeCount;
+            if (str.EndsWith("k"))  return (int)(float.Parse(str.TrimEnd('k')) * 1000);
+            else                    return int.Parse(str);
         }
     }
 }
