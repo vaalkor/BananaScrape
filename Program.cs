@@ -35,6 +35,7 @@ namespace BananaScrape
 
             //var url = "https://gamebanana.com/maps/cats/43"; //A good test page. It only had 47 maps on it...
 
+            //This option causes the browser to not load images. To reduce load on server.
             var options = new ChromeOptions();
             options.AddUserProfilePreference("profile.default_content_setting_values.images", 2);
 
