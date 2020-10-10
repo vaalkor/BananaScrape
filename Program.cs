@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Linq;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
+using OpenQA.Selenium.Support.UI;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -18,6 +19,7 @@ namespace BananaScrape
         private static List<MapInfo> _mapInfo = new List<MapInfo>();
         private static int _downloadPause;
         private static int _loadContentPause;
+        private static int _loadMoreLimit = int.MaxValue;
 
         public static int Main()
         {
@@ -25,27 +27,33 @@ namespace BananaScrape
         }
 
         [Description("Scrapes a single Gamebanana page and saves metadata about the maps to a json file. Optionally can download the maps as well.")]
-        public static int Scrape(string url, bool download = false, int downloadPause = 1000, int loadContentPause = 200)
+        public static int Scrape(string url, bool download = false, int downloadPause = 1000, int loadContentPause = 200, int loadMoreLimit = int.MaxValue)
         {
             Console.WriteLine($"Starting scrape for mapinfo file: {url} with download = {download} and downloadPause: {downloadPause}");
 
-            _downloadPause = downloadPause; _loadContentPause = loadContentPause;
+            _downloadPause = downloadPause; _loadContentPause = loadContentPause; _loadMoreLimit = loadMoreLimit;
 
             //var url = "https://gamebanana.com/maps/cats/43"; //A good test page. It only had 47 maps on it...
 
-            using (_driver = new ChromeDriver(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)))
+            var options = new ChromeOptions();
+            options.AddUserProfilePreference("profile.default_content_setting_values.images", 2);
+
+            _driver = new ChromeDriver(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), options);
+            
+            ScrapePage(url);
+
+            var filename = $"scrape_data_{DateTime.Now.ToString("yyyy-MM-dd hh_mm_ss")}.json";
+            Console.WriteLine($"Finished scraping map information. Number of items scraped: {_mapInfo.Count}");
+            Console.WriteLine($"Writing json file: {filename}");
+
+            File.WriteAllText(filename, JsonConvert.SerializeObject(new { Url = url, MapInfo = _mapInfo }, Formatting.Indented));
+
+            if (download)
             {
-                ScrapePage(url);
-
-                var filename = $"scrape_data_{DateTime.Now.ToString("yyyy-MM-dd hh:mm:ss")}.json";
-                File.WriteAllText(filename, JsonConvert.SerializeObject(new { Url = url, MapInfo = _mapInfo }, Formatting.Indented));
-
-                if (download)
-                {
-                    DownloadMaps(_mapInfo.Select(x => x.Link));
-                }
+                DownloadMaps(_mapInfo.Select(x => x.Link));
             }
 
+            _driver.Dispose();
             return 0;
         }
 
@@ -58,25 +66,25 @@ namespace BananaScrape
             var fileData = JsonConvert.DeserializeObject<JObject>(File.ReadAllText(filename));
             var mapInfo = fileData["MapInfo"].ToObject<Dictionary<string, object>[]>();
 
-            using (_driver = new ChromeDriver(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)))
-            {
-                DownloadMaps(mapInfo.Select(x => x["Link"]).Cast<string>());
-            }
+            _driver = new ChromeDriver(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
+            
+            DownloadMaps(mapInfo.Select(x => x["Link"]).Cast<string>());
 
+            _driver.Dispose();
             return 0;
         }
 
         [Description("Attempts to scrape some info from google just to see if selenium is working properly.")]
         public static int TestScrape()
         {
-            using (_driver = new ChromeDriver(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)))
-            {
-                _driver.Navigate().GoToUrl("https://www.google.com");
-                IWebElement body = _driver.FindElementByTagName("body");
-                Console.WriteLine($"TEST: Google page body element:");
-                Console.WriteLine(body);
-            }
+            _driver = new ChromeDriver(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
+            
+            _driver.Navigate().GoToUrl("https://www.google.com");
+            IWebElement body = _driver.FindElementByTagName("body");
+            Console.WriteLine($"TEST: Google page body element:");
+            Console.WriteLine(body);
 
+            _driver.Dispose();
             return 0;
         }
 
@@ -84,7 +92,11 @@ namespace BananaScrape
         {
             foreach (var link in links)
             {
+                Console.WriteLine($"Triggering download for url: \"{link}\"");
+
                 DownloadMap(link);
+
+                Console.WriteLine($"Sleeping for {_downloadPause} milliseconds");
                 Thread.Sleep(_downloadPause);
             }
         }
@@ -101,11 +113,19 @@ namespace BananaScrape
         {
             _driver.Navigate().GoToUrl(url);
 
+            int loadMoreCount = 0;
             bool clickAgain;
             do
             {
                 clickAgain = (bool)_driver.ExecuteScript(Constants.ClickLoadMoreContentScript);
                 Thread.Sleep(_loadContentPause);
+
+                Console.WriteLine($"Loaded more content {loadMoreCount} times...");
+                if (++loadMoreCount > _loadMoreLimit)
+                {
+                    Console.WriteLine($"Reached load more limit: {_loadMoreLimit}");
+                    break;
+                }
             }
             while (clickAgain);
             Thread.Sleep(5000); //Just being paranoid here but heyho let's do it anyhow.

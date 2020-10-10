@@ -2,7 +2,11 @@
   "profiles": {
     "BananaScrape": {
       "commandName": "Project",
-      "commandLineArgs": "TestScrape"
+      "commandLineArgs": "Scrape --url \"https://gamebanana.com/maps/cats/42\" --download true  --downloadPause 10000 --loadContentPause 1000 --loadMoreLimit 0"
+    },
+    "DownloadFromJson": {
+      "commandName": "Executable",
+      "commandLineArgs": "Download --filename \"scrape_data_2020-10-10 03_52_23.json\" --downloadPause 10000"
     }
   }
 }
