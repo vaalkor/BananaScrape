@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "BananaScrape": {
+      "commandName": "Project",
+      "commandLineArgs": "TestScrape"
+    }
+  }
+}

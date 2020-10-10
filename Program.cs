@@ -17,6 +17,7 @@ namespace BananaScrape
         private static ChromeDriver _driver = null;
         private static List<MapInfo> _mapInfo = new List<MapInfo>();
         private static int _downloadPause;
+        private static int _loadContentPause;
 
         public static int Main()
         {
@@ -24,9 +25,11 @@ namespace BananaScrape
         }
 
         [Description("Scrapes a single Gamebanana page and saves metadata about the maps to a json file. Optionally can download the maps as well.")]
-        public static int Scrape(string url, bool download = false, int downloadPause = 1000)
+        public static int Scrape(string url, bool download = false, int downloadPause = 1000, int loadContentPause = 200)
         {
-            _downloadPause = downloadPause;
+            Console.WriteLine($"Starting scrape for mapinfo file: {url} with download = {download} and downloadPause: {downloadPause}");
+
+            _downloadPause = downloadPause; _loadContentPause = loadContentPause;
 
             //var url = "https://gamebanana.com/maps/cats/43"; //A good test page. It only had 47 maps on it...
 
@@ -34,8 +37,7 @@ namespace BananaScrape
             {
                 ScrapePage(url);
 
-                var now = DateTime.Now;
-                var filename = $"scrape_data_{now.Day}_{now.Month}_{now.Year}_{now.TimeOfDay.ToString().Replace('.', '_').Replace(':', '_')}.json";
+                var filename = $"scrape_data_{DateTime.Now.ToString("yyyy-MM-dd hh:mm:ss")}.json";
                 File.WriteAllText(filename, JsonConvert.SerializeObject(new { Url = url, MapInfo = _mapInfo }, Formatting.Indented));
 
                 if (download)
@@ -50,6 +52,7 @@ namespace BananaScrape
         [Description("Downloads all of the files specified in a scrape json file.")]
         public static int Download(string filename, int downloadPause = 1000)
         {
+            Console.WriteLine($"Starting download for mapinfo file: {filename} with downloadPause: {downloadPause}");
             _downloadPause = downloadPause;
 
             var fileData = JsonConvert.DeserializeObject<JObject>(File.ReadAllText(filename));
@@ -58,6 +61,20 @@ namespace BananaScrape
             using (_driver = new ChromeDriver(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)))
             {
                 DownloadMaps(mapInfo.Select(x => x["Link"]).Cast<string>());
+            }
+
+            return 0;
+        }
+
+        [Description("Attempts to scrape some info from google just to see if selenium is working properly.")]
+        public static int TestScrape()
+        {
+            using (_driver = new ChromeDriver(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)))
+            {
+                _driver.Navigate().GoToUrl("https://www.google.com");
+                IWebElement body = _driver.FindElementByTagName("body");
+                Console.WriteLine($"TEST: Google page body element:");
+                Console.WriteLine(body);
             }
 
             return 0;
@@ -88,7 +105,7 @@ namespace BananaScrape
             do
             {
                 clickAgain = (bool)_driver.ExecuteScript(Constants.ClickLoadMoreContentScript);
-                Thread.Sleep(200);
+                Thread.Sleep(_loadContentPause);
             }
             while (clickAgain);
             Thread.Sleep(5000); //Just being paranoid here but heyho let's do it anyhow.
