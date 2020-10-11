@@ -1,25 +1,19 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using OpenQA.Selenium;
-using OpenQA.Selenium.Chrome;
-using OpenQA.Selenium.Firefox;
-using OpenQA.Selenium.Support.UI;
+using OpenQA.Selenium.Remote;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
-using BananaScrape.Models;
-using BananaScrape.Interfaces;
-using OpenQA.Selenium.Remote;
 
 namespace BananaScrape
 {
     public class Program
     {
-        private static IDriver<RemoteWebDriver> _driver = null;
+        private static RemoteWebDriver _driver = null;
         private static List<MapInfo> _mapInfo = new List<MapInfo>();
         private static int _downloadPause;
         private static int _loadContentPause;
@@ -34,37 +28,11 @@ namespace BananaScrape
         public static int Scrape(string url, bool download = false, int downloadPause = 1000, int loadContentPause = 200, string browser = "chrome", int loadMoreLimit = int.MaxValue)
         {
             Console.WriteLine($"+++ Browser: ${browser} +++");
-
-            Console.WriteLine($"Starting scrape for mapinfo file: {url} with download = {download} and downloadPause: {downloadPause}");
+            Console.WriteLine($"Starting scrape for page url: {url} with download = {download} and downloadPause: {downloadPause}");
 
             _downloadPause = downloadPause; _loadContentPause = loadContentPause; _loadMoreLimit = loadMoreLimit;
 
-            //var url = "https://gamebanana.com/maps/cats/43"; //A good test page. It only had 47 maps on it...
-
-            //This option causes the browser to not load images. To reduce load on server.
-            // var options = new ChromeOptions();
-            // options.AddUserProfilePreference("profile.default_content_setting_values.images", 2);
-
-            
-
-            if (browser.ToLower() == "chrome")
-            {
-                Console.WriteLine("+++ Loading Chrome +++");
-                _driver = new ChromeWebDriver(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
-            }
-            else if (browser.ToLower() == "firefox")
-            {
-                Console.WriteLine("+++ Loading Firefox +++");
-                _driver = new FirefoxWebDriver(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
-            }
-            else
-            {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("+++ Unknown Browser - defaulting to Chrome +++");
-                _driver = new ChromeWebDriver(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
-                Console.ForegroundColor = ConsoleColor.White;
-            }
-
+            CreateDriver(browser);
 
             ScrapePage(url);
 
@@ -79,12 +47,12 @@ namespace BananaScrape
                 DownloadMaps(_mapInfo.Select(x => x.Link));
             }
 
-            _driver.driver.Dispose();
+            _driver.Dispose();
             return 0;
         }
 
         [Description("Downloads all of the files specified in a scrape json file.")]
-        public static int Download(string filename, int downloadPause = 1000)
+        public static int Download(string filename, int downloadPause = 1000, string browser = "chrome")
         {
             Console.WriteLine($"Starting download for mapinfo file: {filename} with downloadPause: {downloadPause}");
             _downloadPause = downloadPause;
@@ -92,26 +60,44 @@ namespace BananaScrape
             var fileData = JsonConvert.DeserializeObject<JObject>(File.ReadAllText(filename));
             var mapInfo = fileData["MapInfo"].ToObject<Dictionary<string, object>[]>();
 
-            _driver = new ChromeWebDriver(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
-            
+            CreateDriver(browser);
+
             DownloadMaps(mapInfo.Select(x => x["Link"]).Cast<string>());
 
-            _driver.driver.Dispose();
+            _driver.Dispose();
             return 0;
         }
 
         [Description("Attempts to scrape some info from google just to see if selenium is working properly.")]
-        public static int TestScrape()
+        public static int TestScrape(string browser = "chrome")
         {
-            _driver = new ChromeWebDriver(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
+            CreateDriver(browser);
             
-            _driver.driver.Navigate().GoToUrl("https://www.google.com");
-            IWebElement body = _driver.driver.FindElementByTagName("body");
+            _driver.Navigate().GoToUrl("https://www.google.com");
+            IWebElement body = _driver.FindElementByTagName("body");
             Console.WriteLine($"TEST: Google page body element:");
             Console.WriteLine(body);
 
-            _driver.driver.Dispose();
+            _driver.Dispose();
             return 0;
+        }
+
+        private static void CreateDriver(string browser)
+        {
+            if (browser.Equals("chrome", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine("+++ Loading Chrome +++");
+                _driver = Drivers.CreateChromeDriver();
+            }
+            else if (browser.Equals("firefox", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine("+++ Loading Firefox +++");
+                _driver = Drivers.CreateFirefoxDriver();
+            }
+            else
+            {
+                throw new ArgumentException($"Unknown browser: {browser}. Available browsers: [chrome, firefox]");
+            }
         }
 
         private static void DownloadMaps(IEnumerable<string> links)
@@ -129,7 +115,7 @@ namespace BananaScrape
 
         private static void DownloadMap(string link)
         {
-            _driver.driver.Navigate().GoToUrl(link);
+            _driver.Navigate().GoToUrl(link);
             _driver.JavascriptClick(".DownloadOptions > .GreenColor");
             Thread.Sleep(100);
             _driver.JavascriptClick(".DownloadOptions > .GreenColor");
@@ -137,13 +123,13 @@ namespace BananaScrape
 
         private static void ScrapePage(string url)
         {
-            _driver.driver.Navigate().GoToUrl(url);
+            _driver.Navigate().GoToUrl(url);
 
             int loadMoreCount = 0;
             bool clickAgain;
             do
             {
-                clickAgain = (bool)_driver.driver.ExecuteScript(Constants.ClickLoadMoreContentScript);
+                clickAgain = (bool)_driver.ExecuteScript(Constants.ClickLoadMoreContentScript);
                 Thread.Sleep(_loadContentPause);
 
                 Console.WriteLine($"Loaded more content {loadMoreCount} times...");
@@ -156,7 +142,7 @@ namespace BananaScrape
             while (clickAgain);
             Thread.Sleep(5000); //Just being paranoid here but heyho let's do it anyhow.
 
-            var records = _driver.driver.FindElementsByTagName("record");
+            var records = _driver.FindElementsByTagName("record");
             foreach (var rec in records)
             {
                 string link = rec.FindElement(By.CssSelector(".Preview > a")).GetAttribute("href");
