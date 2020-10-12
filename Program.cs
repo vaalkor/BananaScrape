@@ -137,6 +137,7 @@ namespace BananaScrape
 
         private static void ScrapePage(string url)
         {
+            // please leave this try catch alone - it quiting is much nicer than it crashing if it can't reach the page
             try
             {
                 _driver.Navigate().GoToUrl(url);
