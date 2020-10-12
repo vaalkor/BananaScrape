@@ -2,7 +2,7 @@
   "profiles": {
     "BananaScrape": {
       "commandName": "Project",
-      "commandLineArgs": "Scrape --url \"https://gamebanana.com/maps/cats/42\" --download true  --downloadPause 10000 --loadContentPause 1000 --browser \"chrome\""
+      "commandLineArgs": "Scrape --url \"https://gamebanana.com/maps/cats/42\" --download true  --downloadPause 10000 --loadContentPause 1000 --browser \"firefox\"  --searchForInstall false"
     },
     "DownloadFromJson": {
       "commandName": "Executable",

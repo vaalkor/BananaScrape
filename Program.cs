@@ -25,14 +25,28 @@ namespace BananaScrape
         }
 
         [Description("Scrapes a single Gamebanana page and saves metadata about the maps to a json file. Optionally can download the maps as well.")]
-        public static int Scrape(string url, bool download = false, int downloadPause = 1000, int loadContentPause = 200, string browser = "chrome", int loadMoreLimit = int.MaxValue)
+        public static int Scrape(string url, bool download = false, int downloadPause = 1000, int loadContentPause = 200, string browser = "chrome", int loadMoreLimit = int.MaxValue, string userDlLocation = "", bool searchForInstall = false)
         {
-            Console.WriteLine($"+++ Browser: ${browser} +++");
+            Console.WriteLine($"+++ Browser: {browser} +++");
             Console.WriteLine($"Starting scrape for page url: {url} with download = {download} and downloadPause: {downloadPause}");
 
-            _downloadPause = downloadPause; _loadContentPause = loadContentPause; _loadMoreLimit = loadMoreLimit;
+            _downloadPause = downloadPause;
+            _loadContentPause = loadContentPause;
+            _loadMoreLimit = loadMoreLimit;
 
-            CreateDriver(browser);
+            string hl2dmInstallLocatation = userDlLocation;
+
+            if (searchForInstall && download && String.IsNullOrEmpty(userDlLocation))
+            {
+                hl2dmInstallLocatation = GetHl2DmInstallLocation();
+
+                if (!String.IsNullOrEmpty(hl2dmInstallLocatation))
+                {
+                    Console.WriteLine($"+++ Hl2DM Install Location Found - Downloading Maps To This Location: {hl2dmInstallLocatation} +++");
+                }
+            }
+
+            CreateDriver(browser, hl2dmInstallLocatation);
 
             ScrapePage(url);
 
@@ -82,17 +96,17 @@ namespace BananaScrape
             return 0;
         }
 
-        private static void CreateDriver(string browser)
+        private static void CreateDriver(string browser, string installLocation = "")
         {
             if (browser.Equals("chrome", StringComparison.OrdinalIgnoreCase))
             {
                 Console.WriteLine("+++ Loading Chrome +++");
-                _driver = Drivers.CreateChromeDriver();
+                _driver = Drivers.CreateChromeDriver(installLocation);
             }
             else if (browser.Equals("firefox", StringComparison.OrdinalIgnoreCase))
             {
                 Console.WriteLine("+++ Loading Firefox +++");
-                _driver = Drivers.CreateFirefoxDriver();
+                _driver = Drivers.CreateFirefoxDriver(installLocation);
             }
             else
             {
@@ -123,7 +137,18 @@ namespace BananaScrape
 
         private static void ScrapePage(string url)
         {
-            _driver.Navigate().GoToUrl(url);
+            // please leave this try catch alone - it quiting is much nicer than it crashing if it can't reach the page
+            try
+            {
+                _driver.Navigate().GoToUrl(url);
+            } catch (OpenQA.Selenium.WebDriverException err)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"+++ Error Accessing Gamebannana: {err} - quiting +++");
+                Console.ForegroundColor = ConsoleColor.White;
+                return;
+            }
+            
 
             int loadMoreCount = 0;
             bool clickAgain;
@@ -161,6 +186,48 @@ namespace BananaScrape
         {
             if (str.EndsWith("k"))  return (int)(float.Parse(str.TrimEnd('k')) * 1000);
             else                    return int.Parse(str);
+        }
+
+        private static string GetHl2DmInstallLocation()
+        {
+            Console.WriteLine("+++ Searching for hl2dm install folder +++");
+            DriveInfo[] allDrives = DriveInfo.GetDrives();
+            foreach (DriveInfo d in allDrives)
+            {
+                Console.WriteLine("Searching Drive {0}", d.Name);
+                // hl2mp
+                if (d.IsReady == true)
+                {
+                    try
+                    {
+                        // Don't use the DriveInfo.GetDirectories - it's shite and stops on access exceptions
+                        var hl2mpFolder = Directory.EnumerateDirectories(d.Name, "hl2mp", new EnumerationOptions
+                        {
+                            IgnoreInaccessible = true,
+                            RecurseSubdirectories = true
+                        });
+                        
+                        if (hl2mpFolder.Count() > 0)
+                        {
+                            // this way we don't have to worry about any linux bullshit when adding the maps folder on
+                            var mapsFolder = Directory.EnumerateDirectories(hl2mpFolder.First(), "maps");
+
+                            // Console.WriteLine("+++ Found Install Folder +++");
+                            return mapsFolder.First();
+                        }
+
+                    } catch(System.Exception err)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"+++ Error reading harddrive: {err} +++");
+                        Console.ForegroundColor = ConsoleColor.White;
+                    }
+                }
+            }
+
+            Console.WriteLine("+++ Hl2Dm Install Folder not found - leaving install location as default +++");
+
+            return null;
         }
     }
 }
