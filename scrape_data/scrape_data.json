@@ -6087,7 +6087,8 @@
                         "ViewCount":  3300,
                         "LikeCount":  0,
                         "PostCount":  1,
-                        "WasFeatured":  false
+                        "WasFeatured":  false,
+                        "CausesCrash":  "true"
                     },
                     {
                         "Name":  "dm_Poolcastle_v3",

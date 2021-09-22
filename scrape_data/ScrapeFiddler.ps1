@@ -1,10 +1,11 @@
 ﻿param(
-[Parameter(Mandatory=$true)][string]$ScrapeDataFile,
+[string]$ScrapeDataFile="scrape_data.json",
+[string]$MapsFolder="F:\Steam\steamapps\common\Half-Life 2 Deathmatch\hl2mp\maps",
 
 [switch]$UpdateInfo,
 [switch]$GetInfo,
 [string]$Description,
-[int]$Rating,
+[int]   $Rating,
 [string]$MapName,
 [string]$MapUrl,
 
@@ -14,6 +15,7 @@
 [switch]$NoRating,
 [switch]$NoDescription,
 [switch]$NoLabels,
+[switch]$CausesCrash,
 [switch]$CheckDuplicateNames
 )
 "============================"
@@ -51,6 +53,8 @@ if($GetRandomMap -or $ListMaps -or $CountMaps){
     if($NoRating)       { $filteredMaps  = $filteredMaps | ?{-not $_.RobRating}}
     if($NoDescription)  { $filteredMaps  = $filteredMaps | ?{-not $_.RobDescription}}
     if($NoLabels)       { $filteredMaps  = $filteredMaps | ?{-not $_.RobLabels}}
+    if($CausesCrash)    { $filteredMaps  = $filteredMaps | ?{$_.CausesCrash}}
+    else                { $filteredMaps  = $filteredMaps | ?{-not $_.CausesCrash}}
 
     if(-not $filteredMaps){ "No maps found!"; exit 1}
 
@@ -58,11 +62,15 @@ if($GetRandomMap -or $ListMaps -or $CountMaps){
      
 NoRating: $NoRating    
 NoDescription: $NoDescription
-NoLabels: $NoLabels`n============================"
+NoLabels: $NoLabels
+CausesCrash: $CausesCrash`n============================"
 
     if($GetRandomMap){
         $randomMap = $filteredMaps | Get-Random
         "$($randomMap.Name) copied to clipboard!"
+        if(-not (ls -Recurse $MapsFolder | ?{$_.Name -eq "$($randomMap.Name).bsp"})){
+            "WARNING! No map with name `"$($randomMap.Name).bsp`" found in maps folder: $MapsFolder"
+        }
         $randomMap.Name | Set-Clipboard
     }
     elseif($ListMaps){$filteredMaps}
@@ -94,6 +102,7 @@ if($UpdateInfo){
     if($Rating){$updateInfoMap | Add-Member -MemberType NoteProperty -Name 'RobRating' -Value $Rating -Force}
     if($Labels){$updateInfoMap | Add-Member -MemberType NoteProperty -Name 'RobLabels' -Value $Labels -Force}
     if($Description){$updateInfoMap | Add-Member -MemberType NoteProperty -Name 'RobDescription' -Value $Description -Force}
+    if($CausesCrash){$updateInfoMap | Add-Member -MemberType NoteProperty -Name 'CausesCrash' -Value "true" -Force}
     $updateInfoMap.GetType()
 
     "Writing updated data to $ScrapeDataFile"
