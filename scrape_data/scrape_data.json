@@ -3839,7 +3839,8 @@
                         "ViewCount":  2300,
                         "LikeCount":  2,
                         "PostCount":  1,
-                        "WasFeatured":  false
+                        "WasFeatured":  false,
+                        "RobRating":  2
                     },
                     {
                         "Name":  "dm_sloped_v2",
@@ -7000,7 +7001,8 @@
                         "ViewCount":  1300,
                         "LikeCount":  0,
                         "PostCount":  0,
-                        "WasFeatured":  false
+                        "WasFeatured":  false,
+                        "RobRating":  2
                     },
                     {
                         "Name":  "aim_exercises",
@@ -7672,7 +7674,8 @@
                         "ViewCount":  1800,
                         "LikeCount":  0,
                         "PostCount":  0,
-                        "WasFeatured":  false
+                        "WasFeatured":  false,
+                        "RobRating":  2
                     },
                     {
                         "Name":  "dm_trace",
@@ -8696,7 +8699,8 @@
                         "ViewCount":  1600,
                         "LikeCount":  0,
                         "PostCount":  0,
-                        "WasFeatured":  false
+                        "WasFeatured":  false,
+                        "RobRating":  2
                     },
                     {
                         "Name":  "dm_anbu_stepdown",
@@ -8752,7 +8756,8 @@
                         "ViewCount":  2300,
                         "LikeCount":  0,
                         "PostCount":  0,
-                        "WasFeatured":  false
+                        "WasFeatured":  false,
+                        "RobRating":  3
                     },
                     {
                         "Name":  "crossfire2",
@@ -9528,7 +9533,8 @@
                         "ViewCount":  1900,
                         "LikeCount":  2,
                         "PostCount":  1,
-                        "WasFeatured":  false
+                        "WasFeatured":  false,
+                        "RobRating":  3
                     },
                     {
                         "Name":  "dm_killbox_hardcore_hk",
@@ -10448,7 +10454,8 @@
                         "ViewCount":  2000,
                         "LikeCount":  2,
                         "PostCount":  1,
-                        "WasFeatured":  false
+                        "WasFeatured":  false,
+                        "RobRating":  3
                     },
                     {
                         "Name":  "dm_stinkfist",
@@ -10456,7 +10463,8 @@
                         "ViewCount":  4600,
                         "LikeCount":  4,
                         "PostCount":  1,
-                        "WasFeatured":  false
+                        "WasFeatured":  false,
+                        "RobRating":  2
                     },
                     {
                         "Name":  "dm_drift",
@@ -11312,7 +11320,8 @@
                         "ViewCount":  16400,
                         "LikeCount":  25,
                         "PostCount":  12,
-                        "WasFeatured":  false
+                        "WasFeatured":  false,
+                        "RobRating":  4
                     },
                     {
                         "Name":  "dm_altepa",
@@ -11440,7 +11449,8 @@
                         "ViewCount":  2000,
                         "LikeCount":  1,
                         "PostCount":  0,
-                        "WasFeatured":  false
+                        "WasFeatured":  false,
+                        "RobRating":  1
                     },
                     {
                         "Name":  "dm_tropic_stunt",
