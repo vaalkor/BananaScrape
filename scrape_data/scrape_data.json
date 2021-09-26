@@ -6089,7 +6089,9 @@
                         "LikeCount":  0,
                         "PostCount":  1,
                         "WasFeatured":  false,
-                        "CausesCrash":  "true"
+                        "RobLabels":  [
+                                          "CausesCrash"
+                                      ]
                     },
                     {
                         "Name":  "dm_Poolcastle_v3",
@@ -13491,7 +13493,10 @@
                         "LikeCount":  4,
                         "PostCount":  10,
                         "WasFeatured":  false,
-                        "RobRating":  5
+                        "RobRating":  5,
+                        "RobLabels":  [
+                                          "Outdoors"
+                                      ]
                     }
                 ]
 }

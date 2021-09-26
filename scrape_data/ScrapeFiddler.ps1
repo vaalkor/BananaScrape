@@ -5,17 +5,20 @@
 [switch]$UpdateInfo,
 [switch]$GetInfo,
 [string]$Description,
+[Parameter()]
+[ValidateSet('CausesCrash','Outdoors','NoTripmines', 'TooBig', 'Small', 'Medium', 'Large', 'Meme')] 
+[string[]]$Labels,
 [int]   $Rating,
 [string]$MapName,
 [string]$MapUrl,
 
+[switch]$RemoveLabels,
 [switch]$GetRandomMap,
 [switch]$ListMaps,
 [switch]$CountMaps,
 [switch]$NoRating,
 [switch]$NoDescription,
 [switch]$NoLabels,
-[switch]$CausesCrash,
 [switch]$CheckDuplicateNames
 )
 "============================"
@@ -53,8 +56,10 @@ if($GetRandomMap -or $ListMaps -or $CountMaps){
     if($NoRating)       { $filteredMaps  = $filteredMaps | ?{-not $_.RobRating}}
     if($NoDescription)  { $filteredMaps  = $filteredMaps | ?{-not $_.RobDescription}}
     if($NoLabels)       { $filteredMaps  = $filteredMaps | ?{-not $_.RobLabels}}
-    if($CausesCrash)    { $filteredMaps  = $filteredMaps | ?{$_.CausesCrash}}
-    else                { $filteredMaps  = $filteredMaps | ?{-not $_.CausesCrash}}
+
+    if($Labels) { 
+        $filteredMaps  = $filteredMaps | ?{$_.RobLabels -and ($_.RobLabels | ?{$Labels.Contains($_)}).Count -eq $Labels.Count}
+    }
 
     if(-not $filteredMaps){ "No maps found!"; exit 1}
 
@@ -63,7 +68,7 @@ if($GetRandomMap -or $ListMaps -or $CountMaps){
 NoRating: $NoRating    
 NoDescription: $NoDescription
 NoLabels: $NoLabels
-CausesCrash: $CausesCrash`n============================"
+Labels: $Labels`n============================"
 
     if($GetRandomMap){
         $randomMap = $filteredMaps | Get-Random
@@ -100,14 +105,25 @@ if($UpdateInfo){
     else{$updateInfoMap = GetMapWithURL($MapUrl)}
 
     if($Rating){$updateInfoMap | Add-Member -MemberType NoteProperty -Name 'RobRating' -Value $Rating -Force}
-    if($Labels){$updateInfoMap | Add-Member -MemberType NoteProperty -Name 'RobLabels' -Value $Labels -Force}
     if($Description){$updateInfoMap | Add-Member -MemberType NoteProperty -Name 'RobDescription' -Value $Description -Force}
-    if($CausesCrash){$updateInfoMap | Add-Member -MemberType NoteProperty -Name 'CausesCrash' -Value "true" -Force}
-    $updateInfoMap.GetType()
+    if($Labels){
+        if(-not $updateInfoMap.RobLabels){
+            if($RemoveLabels){
+                "RemoveLabels specified, but map $MapName has no labels... Nothing to do."
+                exit 1
+            }
+            $updateInfoMap | Add-Member -MemberType NoteProperty -Name 'RobLabels' -Value $Labels -Force
+        }else{
+            if($RemoveLabels){ $updateInfoMap.RobLabels = $updateInfoMap.RobLabels | ?{-not $Labels.Contains($_)} }
+            else{ $updateInfoMap.RobLabels += ($Labels | ?{-not $updateInfoMap.RobLabels.Contains($_)}) }
+        }
+    }
+    "Updated map info:"
+    $updateInfoMap
 
     "Writing updated data to $ScrapeDataFile"
 
-    $json | ConvertTo-Json | Set-Content -Path $ScrapeDataFile
+    $json | ConvertTo-Json -Depth 5| Set-Content -Path $ScrapeDataFile
 
     exit 0
 }
